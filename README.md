@@ -19,6 +19,7 @@ The following were added or majorly changed on this fork:
 - Giant stairs in Dodongo's Cavern can be lowered with the Bow as an adult (quickly shoot a bomb flower on both side of the stairs)
 - The start of child-side Spirit Temple can be done with bombchus (aim the bombchu directly away from the bridge so that it crawls up the wall, across the ceiling, down the raised bridge, and explodes in front of the switch)
 - The skulltula token in the central room of the Water Temple can be obtained without longshot by setting Farore's Wind in the room and using it to return to the room when the water level is back at its highest level
+- In order to fix a potential softlock, Like-Likes do not steal tunics, but can still steal shields.
 
 ## Optional Logic changes
 
@@ -82,9 +83,13 @@ Regardless of whether of not you use this option, Malon has been sped up in the 
 - The condition for Malon to move to Lon Lon Ranch is now obtaining her item and Talon fleeing the castle (instead of just Talon fleeing the castle)
 - At Lon Lon Ranch, you no longer need to speak to Malon multiple times before she will teach you her song. You can simply walk up to her and pull out your Ocarina.
 
-## Fairy Ocarina
+## Fairy Ocarina and Ocarina of Time
 
-The Fairy Ocarina can be shuffled into the item pool with `shuffle_fairy_ocarina`. This means that Saria will give a random item and that you must find the Ocarina before being able to play any songs. The Ocarina of Time will still always be at its usual location.
+The Fairy Ocarina and Ocarina of Time can be shuffled into the item pool with `shuffle_ocarinas`. This means that Saria and the Ocarin of Time will give a random item and that you must find the Ocarina before being able to play any songs.
+
+## Shuffle Songs into the Pool
+
+Enabling `shuffle_song_items` will make learning songs into items and shuffle the songs into the item pool. Song can appear at any location, and any item can appear at the original song locations.
 
 ## Keysanity
 
@@ -97,10 +102,6 @@ This was actually mostly implemented, I just pulled the trigger...
 Gold Skulltula Token are added to the item pool, and Gold Skulltula locations give random items. There are two levels for this option: complete shuffle of all 100 tokens, or shuffling only the tokens inside dungeons (there are 44.) The later option can add variance to small key layout in dungeons when keysanity is turned off.
 
 In addition there is an option for the logic to expect Sun's Song to obtain any night-only skulltula token.
-
-## OHKO
-
-Setting `ohko` will make Link die in one hit...
 
 ## Changed hint system
 
@@ -118,6 +119,10 @@ You can randomize the note pattern that is required to activate each song. The n
 
 Similar to the tunic color options, you can change Navi's color for each of her different kinds of targets.
 
+## Navi sound options
+
+Similar to the low health sound option, you can change the sound Navi makes while targeting or when she has a hint for you.
+
 ## Chest size matches contents
 
 `correct_chest_sizes`: Major items will appear in a large chest and other items in small chests. There are a few places that cannot be correctly updated:
@@ -125,3 +130,15 @@ Similar to the tunic color options, you can change Navi's color for each of her 
 - Chests summoned by Zelda's Lullaby
 - Chests summoned by Sun's Song Triggered
 - Chests summoned by a switch that do not fall
+
+## Difficulty options
+
+If you seek an additional challenge in regards to combat during the randomizer, you can increase the difficulty with the following settings:
+
+- `normal`: no changes to the item pool
+- `hard`: double defense, double magic, and all 8 heart containers are removed
+- `very_hard`: Double defense, double magic, Nayru's Love, and all health upgrades are removed
+- `ohko`: Link die in one hit...
+
+The `hard` difficulty still leaves the heart pieces in the pool, so you can gain up to 12 hearts total, likely a few less though. It also doesn't remove NL, but still takes away double magic so it can't be spammed for multiple minutes of invulnerability.
+The `very_hard` difficulty just takes it all away, meaning the player will stay at 3 hearts without double defense or Nayru's Love.

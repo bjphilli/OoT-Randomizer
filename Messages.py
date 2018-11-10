@@ -6,9 +6,9 @@ TABLE_START = 0xB849EC
 TEXT_START = 0x92D000
 
 TABLE_SIZE_LIMIT = 0x43A8
-TEXT_SIZE_LIMIT = 0x38130
+ENG_TEXT_SIZE_LIMIT = 0x38130
+JPN_TEXT_SIZE_LIMIT = 0x3A150
 
-SHOP_ITEM_START = 0xC022CC
 
 # name of type, followed by number of additional bytes to read, follwed by a function that prints the code
 CONTROL_CODES = {
@@ -63,6 +63,7 @@ GOSSIP_STONE_MESSAGES = list( range(0x0401, 0x0421) ) # ids of the actual hints
 GOSSIP_STONE_MESSAGES += [0x2053, 0x2054] # shared initial stone messages
 TEMPLE_HINTS_MESSAGES = [0x7057, 0x707A] # dungeon reward hints from the temple of time pedestal
 LIGHT_ARROW_HINT = [0x70CC] # ganondorf's light arrow hint line
+GS_TOKEN_MESSAGES = [0x00B4, 0x00B5] # Get Gold Skulltula Token messages
 
 # messages for shorter item messages
 ITEM_MESSAGES = {
@@ -90,7 +91,7 @@ ITEM_MESSAGES = {
     0x0030: "\x08\x13\x06You found the \x05\x41Fairy Slingshot\x05\x40!",
     0x0031: "\x08\x13\x03You found the \x05\x41Fairy Bow\x05\x40!",
     0x0032: "\x08\x13\x02You got \x05\x41Bombs\x05\x40!\x01If you see something\x01suspicious, bomb it!",
-    0x0033: "\x08\x13\x09You got \x05\x41Bombchu\x05\x40!",
+    0x0033: "\x08\x13\x09You got \x05\x41Bombchus\x05\x40!",
     0x0034: "\x08\x13\x01You got a \x05\x41Deku Nut\x05\x40!",
     0x0035: "\x08\x13\x0EYou found the \x05\x41Boomerang\x05\x40!",
     0x0036: "\x08\x13\x0AYou found the \x05\x41Hookshot\x05\x40!\x01It's a spring-loaded chain that\x01you can cast out to hook things.",
@@ -168,7 +169,7 @@ ITEM_MESSAGES = {
     0x00AE: "\x08\x13\x0DYou got \x05\x42Farore's Wind\x05\x40!\x01This is warp magic you can use!",
     0x00AF: "\x08\x13\x13You got \x05\x43Nayru's Love\x05\x40!\x01Cast this to create a powerful\x01protective barrier.",
     0x00B4: "\x08You destroyed a \x05\x41Gold Skulltula\x05\x40.\x01You got a token proving you \x01destroyed it!",
-    0x00B5: "\x08You destroyed a \x05\x41Gold Skulltula\x05\x40.\x01You got a token proving you \x01destroyed it!",
+    0x00B5: "\x08You destroyed a \x05\x41Gold Skulltula\x05\x40.\x01You got a token proving you \x01destroyed it!", #Unused
     0x00C2: "\x08\x13\x73You got a \x05\x41Piece of Heart\x05\x40!\x01Collect four pieces total to get\x01another Heart Container.",
     0x00C3: "\x08\x13\x73You got a \x05\x41Piece of Heart\x05\x40!\x01So far, you've collected two \x01pieces.",
     0x00C4: "\x08\x13\x73You got a \x05\x41Piece of Heart\x05\x40!\x01Now you've collected three \x01pieces!",
@@ -206,7 +207,7 @@ KEYSANITY_MESSAGES = {
     0x1d: '\x13\x74\x08You got the \x05\x41Boss Key\x05\x40\x01for the \x05\x43Water Temple\x05\x40!\x09',
     0x1e: '\x13\x74\x08You got the \x05\x41Boss Key\x05\x40\x01for the \x05\x46Spirit Temple\x05\x40!\x09',
     0x2a: '\x13\x74\x08You got the \x05\x41Boss Key\x05\x40\x01for the \x05\x45Shadow Temple\x05\x40!\x09',
-    0x61: '\x13\x74\x08You got the \x05\x41Boss Key\x05\x40\x01for \x05\x47Ganon\'s Castle\x05\x40!\x09',
+    0x61: '\x13\x74\x08You got the \x05\x41Boss Key\x05\x40\x01for \x05\x41Ganon\'s Castle\x05\x40!\x09',
     0x62: '\x13\x75\x08You found the \x05\x41Compass\x05\x40\x01for the \x05\x42Deku Tree\x05\x40!\x09',
     0x63: '\x13\x75\x08You found the \x05\x41Compass\x05\x40\x01for \x05\x41Dodongo\'s Cavern\x05\x40!\x09',
     0x64: '\x13\x75\x08You found the \x05\x41Compass\x05\x40\x01for \x05\x43Jabu Jabu\'s Belly\x05\x40!\x09',
@@ -235,7 +236,7 @@ KEYSANITY_MESSAGES = {
     0x9b: '\x13\x77\x08You found a \x05\x41Small Key\x05\x40\x01for the \x05\x45Bottom of the Well\x05\x40!\x09',
     0x9f: '\x13\x77\x08You found a \x05\x41Small Key\x05\x40\x01for the \x05\x46Gerudo Training\x01Grounds\x05\x40!\x09',
     0xa0: '\x13\x77\x08You found a \x05\x41Small Key\x05\x40\x01for the \x05\x46Gerudo Fortress\x05\x40!\x09',
-    0xa1: '\x13\x77\x08You found a \x05\x41Small Key\x05\x40\x01for \x05\x47Ganon\'s Castle\x05\x40!\x09',
+    0xa1: '\x13\x77\x08You found a \x05\x41Small Key\x05\x40\x01for \x05\x41Ganon\'s Castle\x05\x40!\x09',
 }
 
 
@@ -252,7 +253,7 @@ SONG_MESSAGES = {
     0x00BA: "\x08\x06\x14You've learned \x05\x42Saria's Song\x05\x40!",
     0x00BB: "\x08\x06\x0BYou've learned the \x05\x46Sun's Song\x05\x40!",
     0x00BC: "\x08\x06\x05You've learned the \x05\x44Song of Time\x05\x40!",
-    0x00BD: "\x08You've learned the \x05\x45Song of Storms\x05\x40!",    
+    0x00BD: "\x08You've learned the \x05\x45Song of Storms\x05\x40!",
 }
 
 
@@ -298,6 +299,13 @@ class Text_Code():
             return '?'
         else:
             return chr(self.code)
+
+    # writes the code to the given offset, and returns the offset of the next byte
+    def size(self):
+        size = 1
+        if self.code in CONTROL_CODES:
+            size += CONTROL_CODES[self.code][1]
+        return size
 
     # writes the code to the given offset, and returns the offset of the next byte
     def write(self, rom, offset):
@@ -391,14 +399,57 @@ class Message():
     def is_basic(self):
         return not (self.has_goto or self.has_keep_open or self.has_event or self.has_fade or self.has_ocarina or self.has_two_choice or self.has_three_choice)
 
+
     # writes a Message back into the rom, using the given index and offset to update the table
     # returns the offset of the next message
-    def write(self, rom, index, offset, replace_ending=False, ending=None, always_allow_skip=True, speed_up_text=True):
+    def size(self, replace_ending=False, ending=None, always_allow_skip=True, speed_up_text=True):
+        size = 0
+
+        ending_codes = [0x02, 0x07, 0x0A, 0x0B, 0x0E, 0x10]
+        box_breaks = [0x04, 0x0C]
+        slows_text = [0x08, 0x09, 0x14]
+
+        # # speed the text
+        if speed_up_text:
+            size += 1
+
+        # write the message
+        for code in self.text_codes:
+            # ignore ending codes if it's going to be replaced
+            if replace_ending and code.code in ending_codes:
+                pass
+            # ignore the "make unskippable flag"
+            elif always_allow_skip and code.code == 0x1A:
+                pass
+            # ignore anything that slows down text
+            elif speed_up_text and code.code in slows_text:
+                pass
+            elif speed_up_text and code.code in box_breaks:
+                size += 2
+            else:
+                size += code.size()
+
+        if replace_ending:
+            if ending:
+                if speed_up_text and ending.code == 0x10: # ocarina
+                    size += 1
+                size += ending.size() # write special ending
+            size += 1
+
+        while size % 4 > 0:
+            size += 1
+
+        return size
+
+
+    # writes a Message back into the rom, using the given index and offset to update the table
+    # returns the offset of the next message
+    def write(self, rom, index, offset, replace_ending=False, ending=None, always_allow_skip=True, speed_up_text=True, bank=0x07):
 
         # construct the table entry
         id_bytes = int_to_bytes(self.id, 2)
         offset_bytes = int_to_bytes(offset, 3)
-        entry = id_bytes + bytes([self.opts, 0x00, 0x07]) + offset_bytes
+        entry = id_bytes + bytes([self.opts, 0x00, bank]) + offset_bytes
         # write it back
         entry_offset = TABLE_START + 8 * index
         rom.write_bytes(entry_offset, entry)
@@ -490,13 +541,15 @@ class Message():
     __str__ = __repr__ = display
 
 # wrapper for updating the text of a message, given its message id
-# if the id does not exist in the list, this will silently do nothing
+# if the id does not exist in the list, then it will add it
 def update_message_by_id(messages, id, text, opts=None):
     # get the message index
     index = next( (m.index for m in messages if m.id == id), -1)
     # update if it was found
     if index >= 0:
         update_message_by_index(messages, index, text, opts)
+    else:
+        add_message(messages, text, id, opts)
 
 # Gets the message by its ID. Returns None if the index does not exist
 def get_message_by_id(messages, id):
@@ -512,6 +565,7 @@ def update_message_by_index(messages, index, text, opts=None):
     if opts is None:
         opts = messages[index].opts
     messages[index] = Message.from_string(text, messages[index].id, opts)
+    messages[index].index = index
 
 # wrapper for adding a string message to a list of messages
 def add_message(messages, text, id=0, opts=0x00):
@@ -538,9 +592,9 @@ class Shop_Item():
         return ', '.join(meta_data) + '\n' + ', '.join(func_data)
 
     # write the shop item back
-    def write(self, rom, index):
+    def write(self, rom, shop_table_address, index):
 
-        entry_offset = SHOP_ITEM_START + 0x20 * index
+        entry_offset = shop_table_address + 0x20 * index
 
         bytes = []
         bytes += int_to_bytes(self.object, 2)
@@ -559,9 +613,9 @@ class Shop_Item():
         rom.write_bytes(entry_offset, bytes)
 
     # read a single message
-    def __init__(self, rom, index):
+    def __init__(self, rom, shop_table_address, index):
 
-        entry_offset = SHOP_ITEM_START + 0x20 * index
+        entry_offset = shop_table_address + 0x20 * index
         entry = rom.read_bytes(entry_offset, 0x20)
 
         self.index = index
@@ -581,18 +635,18 @@ class Shop_Item():
     __str__ = __repr__ = display
 
 # reads each of the shop items
-def read_shop_items(rom):
+def read_shop_items(rom, shop_table_address):
     shop_items = []
 
-    for index in range(0x032):
-        shop_items.append( Shop_Item(rom, index) )
+    for index in range(0, 100):
+        shop_items.append( Shop_Item(rom, shop_table_address, index) )
 
     return shop_items
 
 # writes each of the shop item back into rom
-def write_shop_items(rom, shop_items):
+def write_shop_items(rom, shop_table_address, shop_items):
     for s in shop_items:
-        s.write(rom, s.index)
+        s.write(rom, shop_table_address, s.index)
 
 # these are unused shop items, and contain text ids that are used elsewhere, and should not be moved
 SHOP_ITEM_EXCEPTIONS = [0x0A, 0x0B, 0x11, 0x12, 0x13, 0x14, 0x29]
@@ -633,42 +687,65 @@ def move_shop_item_messages(messages, shop_items):
         if is_in_item_range(shop.purchase_message):
             shop.purchase_message |= 0x8000
 
+def make_player_message(text):
+    player_text_U = '\x05\x42\x0F\x05\x40'
+    player_text_L = '\x05\x42\x0F\x05\x40'
+    pronoun_mapping = {
+        'You have ': player_text_U + ' ',
+        'You\'ve ':  player_text_U + ' ',
+        'Your ':     player_text_U + '\'s ',
+        'You ':      player_text_U + ' ',
+
+        'you have ': player_text_L + ' ',
+        'you\'ve ':  player_text_L + ' ',
+        'your ':     player_text_L + '\'s ',
+        'you ':      player_text_L + ' ',
+    }
+
+    verb_mapping = {
+        'obtained ': 'got ',
+        'received ': 'got ',
+        'learned ': 'got ',
+        'borrowed ': 'got ',
+        'found ': 'got ',
+    }
+
+    new_text = text
+    for find_text, replace_text in pronoun_mapping.items():
+        if find_text in text:
+            new_text = new_text.replace(find_text, replace_text, 1)
+            break
+    for find_text, replace_text in verb_mapping.items():
+        new_text = new_text.replace(find_text, replace_text)
+    return new_text
+
+
+
 
 # add the keysanity messages
 # make sure to call this AFTER move_shop_item_messages()
 def add_keysanity_messages(messages, world):
     for id, text in KEYSANITY_MESSAGES.items():
         if world.world_count > 1:
-            index = 0
-            while ord(text[index]) in CONTROL_CODES:
-                index = index + CONTROL_CODES[ord(text[index])][1] + 1
-            new_text = text[:index] + "\x08\x05\x42Player \x18:\x05\x40\x01" + text[index:]
-            add_message(messages, new_text, id, 0x23)
+            update_message_by_id(messages, id, make_player_message(text), 0x23)
         else:
-            add_message(messages, text, id, 0x23)
+            update_message_by_id(messages, id, text, 0x23)
 
 # add the song messages
 # make sure to call this AFTER move_shop_item_messages()
 def add_song_messages(messages, world):
     for id, text in SONG_MESSAGES.items():
         if world.world_count > 1:
-            index = 0
-            while ord(text[index]) in CONTROL_CODES:
-                index = index + CONTROL_CODES[ord(text[index])][1] + 1
-            new_text = text[:index] + "\x08\x05\x42Player \x18:\x05\x40\x01" + text[index:]
-            add_message(messages, new_text, id, 0x23)
+            update_message_by_id(messages, id, make_player_message(text), 0x23)
         else:
-            add_message(messages, text, id, 0x23)
+            update_message_by_id(messages, id, text, 0x23)
 
 # reduce item message sizes
 def update_item_messages(messages, world):
     for id, text in ITEM_MESSAGES.items():
         if world.world_count > 1:
-            index = 0
-            while ord(text[index]) in CONTROL_CODES:
-                index = index + CONTROL_CODES[ord(text[index])][1] + 1
-            new_text = text[:index] + "\x08\x05\x42Player \x18:\x05\x40\x01" + text[index:]
-            update_message_by_id(messages, id, new_text)
+            update_message_by_id(messages, id, make_player_message(text), 0x23)
+
         else:
             update_message_by_id(messages, id, text)
 
@@ -708,16 +785,33 @@ def repack_messages(rom, messages, permutation=None, always_allow_skip=True, spe
 
     # repack messages
     offset = 0
+    text_size_limit = ENG_TEXT_SIZE_LIMIT
+    text_bank = 0x07
+
     for old_index, new_index in enumerate(permutation):
         old_message = messages[old_index]
         new_message = messages[new_index]
-        remember_id = new_message.id 
+        remember_id = new_message.id
         new_message.id = old_message.id
-        offset = new_message.write(rom, old_index, offset, True, old_message.ending, always_allow_skip, speed_up_text)
+
+        # check if there is space to write the message
+        message_size = new_message.size(True, old_message.ending, always_allow_skip, speed_up_text)
+        if message_size + offset > text_size_limit:
+            # if there is no room then switch banks
+            if text_bank == 0x07:
+                text_size_limit = JPN_TEXT_SIZE_LIMIT
+                text_bank = 0x08
+                offset = 0
+
+        # actually write the message
+        offset = new_message.write(rom, old_index, offset, True, old_message.ending, always_allow_skip, speed_up_text, text_bank)
+
         new_message.id = remember_id
 
-    if offset > TEXT_SIZE_LIMIT:
-        raise(TypeError("Message Text table is too large: 0x" + "{:x}".format(offset) + " written / 0x" + "{:x}".format(TEXT_SIZE_LIMIT) + " allowed."))
+    # raise an exception if too much is written
+    # we raise it at the end so that we know how much overflow there is
+    if offset > text_size_limit:
+        raise(TypeError("Message Text table is too large: 0x" + "{:x}".format(ENG_TEXT_SIZE_LIMIT + offset) + " written / 0x" + "{:x}".format(ENG_TEXT_SIZE_LIMIT + JPN_TEXT_SIZE_LIMIT) + " allowed."))
 
     # end the table
     table_index = len(messages)
@@ -739,9 +833,9 @@ def shuffle_messages(rom, except_hints=True, always_allow_skip=True):
 
     def is_not_exempt(m):
         exempt_as_id = m.is_id_message()
-        exempt_as_hint = ( except_hints and m.id in (GOSSIP_STONE_MESSAGES + TEMPLE_HINTS_MESSAGES + LIGHT_ARROW_HINT + list(KEYSANITY_MESSAGES.keys()) ) )
+        exempt_as_hint = ( except_hints and m.id in (GOSSIP_STONE_MESSAGES + TEMPLE_HINTS_MESSAGES + LIGHT_ARROW_HINT + list(KEYSANITY_MESSAGES.keys()) + shuffle_messages.shop_item_messages ) )
         return not ( exempt_as_id or exempt_as_hint )
-    
+
     have_goto =         list( filter( lambda m: is_not_exempt(m) and m.has_goto, messages) )
     have_keep_open =    list( filter( lambda m: is_not_exempt(m) and m.has_keep_open, messages) )
     have_event =        list( filter( lambda m: is_not_exempt(m) and m.has_event, messages) )

@@ -1,0 +1,15 @@
+* text=auto
+
+*.txt  text
+*.c    text
+*.h    text
+*.py   text
+*.md   text
+*.html text
+*.asm  text
+
+*.bin         binary
+*.o           binary
+/data/*       binary
+/Decompress/* binary
+/Compress/*   binary

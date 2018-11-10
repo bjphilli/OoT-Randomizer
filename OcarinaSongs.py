@@ -13,6 +13,7 @@ ACTIVATION_TO_PLAYBACK_NOTE = {
 }
 
 import random
+from Utils import random_choices
 
 # checks if one list is a sublist of the other (in either direction)
 # python is magic.....
@@ -64,7 +65,7 @@ def identity(x):
     return x
 
 def random_piece(count, allowed=range(0,5)):
-    return random.choices(allowed, k=count)
+    return random_choices(allowed, k=count)
 
 def invert_piece(piece):
     return [4 - note for note in piece]
@@ -197,7 +198,7 @@ class Song():
 
         if rand_song:
             self.length = random.randint(4, 8)
-            self.activation = random.choices(range(0,5), k=self.length)
+            self.activation = random_choices(range(0,5), k=self.length)
             self.playback = random_playback(self.activation)
         else:
             if extra_position != 'none':
@@ -214,28 +215,28 @@ class Song():
 # randomly choose song parameters
 def get_random_song():
 
-    rand_song = random.choices([True, False], [1, 9])[0]
-    piece_size = random.choices([3, 4], [5, 2])[0]
-    extra_position = random.choices(['none', 'start', 'middle', 'end'], [12, 1, 1, 1])[0]
+    rand_song = random_choices([True, False], [1, 9])[0]
+    piece_size = random_choices([3, 4], [5, 2])[0]
+    extra_position = random_choices(['none', 'start', 'middle', 'end'], [12, 1, 1, 1])[0]
     activation_transform = identity
     playback_transform = identity
     weight_damage = 0
-    should_transpose = random.choices([True, False], [1, 4])[0]
+    should_transpose = random_choices([True, False], [1, 4])[0]
     starting_range=range(0,5)
     if should_transpose:
         weight_damage = 2
-        direction = random.choices(['up', 'down'], [1, 1])[0]
+        direction = random_choices(['up', 'down'], [1, 1])[0]
         if direction == 'up':
             starting_range=range(0,4)
             activation_transform = transpose_piece(1)
         elif direction == 'down':
             starting_range=range(1,5)
             activation_transform = transpose_piece(-1)
-    should_invert = random.choices([True, False], [3 - weight_damage, 6])[0]
+    should_invert = random_choices([True, False], [3 - weight_damage, 6])[0]
     if should_invert:
         weight_damage += 1
         activation_transform = compose(invert_piece, activation_transform)
-    should_reflect = random.choices([True, False], [5 - weight_damage, 4])[0]
+    should_reflect = random_choices([True, False], [5 - weight_damage, 4])[0]
     if should_reflect:
         activation_transform = compose(reverse_piece, activation_transform)
         playback_transform = reverse_piece
@@ -321,3 +322,58 @@ def replace_songs(rom, scarecrow_song=None):
         # write the songs to the playback table
         song_offset = PLAYBACK_START + song_order[index] * PLAYBACK_LENGTH
         rom.write_bytes(song_offset, song.playback_data)
+
+
+original_songs = [
+    'LURLUR',
+    'ULRULR',
+    'DRLDRL',
+    'RDURDU',
+    'RADRAD',
+    'ADUADU',
+    'AULRLR',
+    'DADALDLD',
+    'ADRRL',
+    'ADALDA',
+    'LRRALRD',
+    'URURLU'
+]
+
+note_map = {
+    'A': 0,
+    'D': 1,
+    'R': 2,
+    'L': 3,
+    'U': 4
+}
+
+def verify_scarecrow_song_str(scarecrow_song_str:str, randomize_ocarina_songs:bool):
+
+    if len(scarecrow_song_str) != 8:
+        raise Exception('Scarecrow Song must be 8 notes long')
+
+    if len(set(scarecrow_song_str.upper())) == 1:
+        raise Exception('Scarecrow Song must contain at least two different notes')
+
+    scarecrow_song = str_to_song(scarecrow_song_str)
+
+    if not randomize_ocarina_songs:
+        for original_song in original_songs:
+            song_notes = []
+            for c in original_song:
+                song_notes.append(note_map[c])
+            song = Song(activation=song_notes)
+
+            if subsong(scarecrow_song, song):
+                raise Exception('You may not have the Scarecrow Song contain an existing song')
+
+    return scarecrow_song
+
+def str_to_song(song:str):
+    notes = []
+    for c in song.upper():
+        if c not in note_map:
+            raise Exception('Invalid note %s. Valid notes are A, D, R, L, U' % c)
+
+        notes.append(note_map[c])
+    return Song(activation=notes)

@@ -56,12 +56,20 @@ override_skulltula_token:
     beqz    v1, @@not_extended
     sw      v1, 0x1C (sp)
 
+    ; display message
+    ; message id is in the extended item table
+    lbu     a1, ITEM_ROW_TEXT_ID (v1)
+    move    a0,s1
+    jal     0x000dce14          ; call ex_0dce14(ctx, text_id, 0)
+    move    a2,zero
+    lw      v1, 0x1C (sp)
+
     ; check if item is for this player
     li      t0, PLAYER_OVERRIDE_DATA
     lh      t1, 0x02(t0)
     beqz    t1, @@extended_effect ; if item is pending player override
     li      t2, 0x01
-    b       @@no_extended_effect
+    b       @@return
     sh      t2, 0x00(t0)          ; set override collected flag
 
 @@extended_effect:
@@ -79,22 +87,25 @@ override_skulltula_token:
     jal     0x0006fdcc          ; call ex_06fdcc(ctx, item) ; this gives link the item
     move    a0,s1               ; a0 = ctx
 
-@@no_extended_effect:
-    ; message id is in the extended item table
-    lw      v1, 0x1C (sp)
-    lbu     a1, ITEM_ROW_TEXT_ID (v1)
-
-    b      @@display_message
+    b       @@return
+    nop
 
 @@not_extended:
     ; get the table entry in the get item table for this item
     li      t1, GET_ITEMTABLE   ; t1 = base of get item table
     li      t2, 0x6             ; t2 = size of an element
-    mult    v0, t2              ; 
+    mult    v0, t2              ;
     mflo    t2                  ; t2 = offset into get item table
     addu    s0, t1, t2          ; s0 = pointer to table entry
-    lb      a1, 0x0 (s0)        ; a1 = item id
 
+    ; display message
+    ; message id is in the get item table
+    move    a0,s1
+    lbu     a1, 0x3 (s0)        ; a1 = text id
+    jal     0x000dce14          ; call ex_0dce14(ctx, text_id, 0)
+    move    a2,zero
+
+    lb      a1, 0x0 (s0)        ; a1 = item id
     ; check if item is for this player
     li      t0, PLAYER_OVERRIDE_DATA
     lh      t1, 0x02(t0)
@@ -110,11 +121,6 @@ override_skulltula_token:
 
     ; message id is in the get item table
     lbu     a1, 0x3 (s0)        ; a1 = text id
-
-@@display_message:
-    move    a0,s1
-    jal     0x000dce14          ; call ex_0dce14(ctx, text_id, 0)
-    move    a2,zero
 
 @@return:
     lw      ra, 0x10 (sp)
@@ -169,7 +175,7 @@ override_object:
 
 @@no_count_inc:
     sb      zero, 0x00 (t1)
-    
+
 @@no_pending_clear:
     jr ra
     nop
@@ -394,7 +400,7 @@ get_override_search_key:
     bne     t2, 0x019C, @@not_skulltula     ; if not skulltula, try for other types
     nop
 
-    li      t0, 0x03            ; t0 = skulltula type   
+    li      t0, 0x03            ; t0 = skulltula type
     lhu     t3, 0x1C (a1)       ; t3 = skulltula token variable
     andi    t1, t3, 0x00FF      ; t1 = skulltula flag (used for the lookup)
     andi    v0, t3, 0x1F00      ; v0 = skulltula scene (shifted)
@@ -434,7 +440,18 @@ get_override_search_key:
     li      t0, 0x02
     lbu     t1, 0x0141 (a1) ; t1 = collectable flag
 @@not_collectable:
+    bne     t2, 0x011A, @@not_grotto_deku_scrub
+    nop
+    bne     v0, 0x3E, @@not_grotto_deku_scrub
+    nop
 
+    ; If grotto scene and deku salescrub, then use the
+    ; grotto id for the scene.
+    li      t0, 0x04
+    li      t3, SAVE_CONTEXT
+    lb      v0, 0x1397(t3)   ; v0 = Grotto ID
+
+@@not_grotto_deku_scrub:
     ; Construct ID used to search the override table
     ; v0 = (scene << 16) | (override_type << 8) | override_id
     sll     v0, v0, 8
@@ -454,10 +471,25 @@ scan_override_table:
     li      v0, -1
 
     li      t0, PLAYER_ID
-    lb      t1, 0x00(t0)
-    li      t0, SAVE_CONTEXT
-    sh      t1, 0x1406(t0) ; set points to current player: default
+    lbu     t1, 0x00(t0)
 
+    li      t0, PLAYER_NAME_ID
+    sb      t1, 0x00 (t0)
+
+    ; Check if the item source ID is 0x7F which is used for Co-op items
+    andi    t1, a0, 0x00FF ; t1 = item source ID
+    li      at, 0x7F
+    bne     t1, at, @@not_coop_item
+    nop
+
+    ; Give co-op item override instead of from the look up table
+    li      t0, PLAYER_ID
+    lbu     t3, 0x00 (t0)  ; t3 = player id
+    lbu     v0, 0x01 (t0)  ; v0 = override item ID
+    b       @@lookup_item_found
+    nop
+
+@@not_coop_item:
     ; Look up override
     li      t0, (ITEM_OVERRIDES - 0x04)
 @@lookup_loop:
@@ -471,20 +503,21 @@ scan_override_table:
     srl     t3, t3, 11  ; t3 = player id
 
     lui     t4, 0xFFFF
-    ori     t4, t4, 0x03FF ;t4 = 0xFFFF07FF masks out the player id
+    ori     t4, t4, 0x07FF ;t4 = 0xFFFF07FF masks out the player id
     and     t2, t2, t4
     bne     t2, a0, @@lookup_loop
     nop
 
     andi    v0, t1, 0xFF ; v0 = found item ID
 
-    li      t0, SAVE_CONTEXT
-    sh      t3, 0x1406(t0) ; set the point value to the player number
+@@lookup_item_found:
+    li      t0, PLAYER_NAME_ID
+    sb      t3, 0x00 (t0)
 
     li      t1, PLAYER_OVERRIDE_DATA
 
     li      t4, PLAYER_ID
-    lb      t4, 0x00(t4)
+    lbu     t4, 0x00(t4)
     beq     t3, t4, @@return ; correct player for the item
     sh      zero, 0x02(t1)   ; store no player override
 

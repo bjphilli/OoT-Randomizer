@@ -6,16 +6,18 @@ import struct
 import random
 
 from HintList import getHint, getHintGroup, Hint
-from ItemList import eventlocations
+from ItemPool import eventlocations
 from Messages import update_message_by_id
 from TextBox import lineWrap
 from Utils import random_choices
-from BaseClasses import CollectionState
+from State import State
+
 
 class GossipStone():
     def __init__(self, name, location):
         self.name = name
         self.location = location
+
 
 gossipLocations = {
     0x0405: GossipStone('Death Mountain Crater (Bombable Wall)', 'Death Mountain Crater Gossip Stone'),
@@ -81,24 +83,30 @@ def isRestrictedDungeonItem(dungeon, item):
     return False
 
 
-def add_hint(worlds, world, IDs, text, count, location=None):
+def add_hint(spoiler, world, IDs, text, count, location=None):
     random.shuffle(IDs)
     skipped_ids = []
     first = True
     while random.random() < count:
         if IDs:
             id = IDs.pop(0)
-            stone_location = gossipLocations[id].location
-            if not first or can_reach_stone(worlds, stone_location, location):
-                if first and location:
-                    old_rule = location.access_rule
-                    location.access_rule = lambda state: state.can_reach(stone_location, resolution_hint='Location') and old_rule(state)
 
-                count -= 1
-                first = False
-                world.spoiler.hints[id] = lineWrap(text)
+            if spoiler.stones_readable:
+                stone_location = gossipLocations[id].location
+                if not first or can_reach_stone(spoiler.worlds, stone_location, location):
+                    if first and location:
+                        old_rule = location.access_rule
+                        location.access_rule = lambda state: state.can_reach(stone_location, resolution_hint='Location') and old_rule(state)
+
+                    count -= 1
+                    first = False
+                    spoiler.hints[world.id][id] = lineWrap(text)
+                else:
+                    skipped_ids.append(id)
             else:
-                skipped_ids.append(id)
+                # The stones are not readable at all in logic, so we ignore any kind of logic here
+                count -= 1
+                spoiler.hints[world.id][id] = lineWrap(text)
         else:
             break
     IDs.extend(skipped_ids)
@@ -110,22 +118,24 @@ def can_reach_stone(worlds, stone_location, location):
 
     old_item = location.item
     location.item = None
-    stone_states = CollectionState.get_states_with_items([world.state for world in worlds], [])
+    stone_states = State.get_states_with_items([world.state for world in worlds], [])
     location.item = old_item
 
     return stone_states[location.world.id].can_reach(stone_location, resolution_hint='Location') and \
            stone_states[location.world.id].guarantee_hint()
 
 
-def writeGossipStoneHintsHints(world, messages):
-    for id,text in world.spoiler.hints.items():
+def writeGossipStoneHints(spoiler, world, messages):
+    for id,text in spoiler.hints[world.id].items():
         update_message_by_id(messages, id, get_raw_text(text))
+
 
 def filterTrailingSpace(text):
     if text.endswith('& '):
         return text[:-1]
     else:
         return text
+
 
 hintPrefixes = [
     'a few ',
@@ -147,6 +157,7 @@ def getSimpleHintNoPrefix(item):
 
     # no prefex
     return hint
+
 
 def colorText(text, color):
     colorMap = {
@@ -180,8 +191,8 @@ def colorText(text, color):
     return text
 
 
-def get_woth_hint(world, checked):
-    locations = world.spoiler.required_locations[world.id]
+def get_woth_hint(spoiler, world, checked):
+    locations = spoiler.required_locations[world.id]
     locations = list(filter(lambda location: location.name not in checked, locations))
     if not locations:
         return None
@@ -196,7 +207,7 @@ def get_woth_hint(world, checked):
         return (buildHintString(colorText(location.hint, 'Light Blue') + " is on the way of the hero."), location)
 
 
-def get_good_loc_hint(world, checked):
+def get_good_loc_hint(spoiler, world, checked):
     locations = getHintGroup('location', world)
     locations = list(filter(lambda hint: hint.name not in checked, locations))
     if not locations:
@@ -210,7 +221,7 @@ def get_good_loc_hint(world, checked):
                 colorText(getHint(getItemGenericName(location.item), world.clearer_hints).text, 'Red') + "."), location)
 
 
-def get_good_item_hint(world, checked):
+def get_good_item_hint(spoiler, world, checked):
     locations = [location for location in world.get_filled_locations()
             if not location.name in checked and \
             location.item.majoritem and \
@@ -229,7 +240,7 @@ def get_good_item_hint(world, checked):
             " can be found at " + colorText(location.hint, 'Green') + "."), location)
 
 
-def get_overworld_hint(world, checked):
+def get_overworld_hint(spoiler, world, checked):
     locations = [location for location in world.get_filled_locations()
             if not location.name in checked and \
             location.item.type != 'Event' and \
@@ -246,7 +257,7 @@ def get_overworld_hint(world, checked):
         " can be found at " + colorText(location.hint, 'Green') + "."), location)
 
 
-def get_dungeon_hint(world, checked):
+def get_dungeon_hint(spoiler, world, checked):
     dungeons = list(filter(lambda dungeon: dungeon.name not in checked, world.dungeons))
     if not dungeons:
         return None
@@ -272,7 +283,7 @@ def get_dungeon_hint(world, checked):
         colorText(getHint(getItemGenericName(location.item), world.clearer_hints).text, 'Red') + "."), location)
 
 
-def get_junk_hint(world, checked):
+def get_junk_hint(spoiler, world, checked):
     hints = getHintGroup('junkHint', world)
     hints = list(filter(lambda hint: hint.name not in checked, hints))
     if not hints:
@@ -285,8 +296,8 @@ def get_junk_hint(world, checked):
 
 
 hint_func = {
-    'trial':    lambda world, checked: None,
-    'always':   lambda world, checked: None,
+    'trial':    lambda spoiler, world, checked: None,
+    'always':   lambda spoiler, world, checked: None,
     'woth':     get_woth_hint,
     'loc':      get_good_loc_hint,
     'item':     get_good_item_hint,
@@ -297,7 +308,17 @@ hint_func = {
 
 
 hint_dist_sets = {
-    'normal': {
+    'useless': {
+        'trial':    (0.0, 0),
+        'always':   (0.0, 0),
+        'woth':     (0.0, 0),
+        'loc':      (0.0, 0),
+        'item':     (0.0, 0),
+        'ow':       (0.0, 0),
+        'dungeon':  (0.0, 0),
+        'junk':     (9.0, 1),
+    },
+    'balanced': {
         'trial':    (0.0, 1),
         'always':   (0.0, 1),
         'woth':     (3.5, 1),
@@ -307,59 +328,84 @@ hint_dist_sets = {
         'dungeon':  (3.5, 1),
         'junk':     (3.0, 1),
     },
-    'tourney': {
+    'strong': {
         'trial':    (0.0, 1),
-        'always':   (0.0, 1.75),
-        'woth':     (4.0, 2),
+        'always':   (0.0, 2),
+        'woth':     (4.0, 2.5),
         'loc':      (2.0, 1),
         'item':     (2.0, 1),
-        'ow':       (2.0, 1),
-        'dungeon':  (2.0, 1),
+        'ow':       (1.0, 1),
+        'dungeon':  (1.0, 1),
+        'junk':     (0.0, 1),
+    },
+    'very_strong': {
+        'trial':    (0.0, 1),
+        'always':   (0.0, 2),
+        'woth':     (3.0, 2),
+        'loc':      (1.0, 1),
+        'item':     (2.0, 1),
+        'ow':       (0.0, 1),
+        'dungeon':  (0.0, 1),
         'junk':     (0.0, 1),
     },
 }
 
 
 #builds out general hints based on location and whether an item is required or not
-def buildGossipHints(worlds, world):
+def buildGossipHints(spoiler, world):
+
+    max_states = State.get_states_with_items([w.state for w in spoiler.worlds], [])
+    spoiler.stones_readable = True
+    for state in max_states:
+        spoiler.stones_readable = spoiler.stones_readable and state.guarantee_hint()
+
     checkedLocations = []
 
     stoneIDs = list(gossipLocations.keys())
     random.shuffle(stoneIDs)
 
     hint_dist = hint_dist_sets[world.hint_dist]
-    hint_types = list(hint_dist.keys())
-    hint_prob = [prob for prob,count in hint_dist.values()]
+    hint_types, hint_prob = zip(*hint_dist.items())
+    hint_prob, hint_count = zip(*hint_prob)
 
     # Add required location hints
     alwaysLocations = getHintGroup('alwaysLocation', world)
     for hint in alwaysLocations:
         location = world.get_location(hint.name)
         checkedLocations.append(hint.name)
-        add_hint(worlds, world, stoneIDs, buildHintString(colorText(getHint(location.name, world.clearer_hints).text, 'Green') + " " + \
+        add_hint(spoiler, world, stoneIDs, buildHintString(colorText(getHint(location.name, world.clearer_hints).text, 'Green') + " " + \
             colorText(getHint(getItemGenericName(location.item), world.clearer_hints).text, 'Red') + "."), hint_dist['always'][1], location)
 
     # Add trial hints
     if world.trials_random and world.trials == 6:
-        add_hint(worlds, world, stoneIDs, buildHintString(colorText("Ganon's Tower", 'Pink') + " is protected by a powerful barrier."), hint_dist['trial'][1])
+        add_hint(spoiler, world, stoneIDs, buildHintString(colorText("Ganon's Tower", 'Pink') + " is protected by a powerful barrier."), hint_dist['trial'][1])
     elif world.trials_random and world.trials == 0:
-        add_hint(worlds, world, stoneIDs, buildHintString("Sheik dispelled the barrier around " + colorText("Ganon's Tower", 'Yellow')), hint_dist['trial'][1])
+        add_hint(spoiler, world, stoneIDs, buildHintString("Sheik dispelled the barrier around " + colorText("Ganon's Tower", 'Yellow')), hint_dist['trial'][1])
     elif world.trials < 6 and world.trials > 3:
         for trial,skipped in world.skipped_trials.items():
             if skipped:
-                add_hint(worlds, world, stoneIDs, buildHintString("the " + colorText(trial + " Trial", 'Yellow') + " was dispelled by Sheik."), hint_dist['trial'][1])
+                add_hint(spoiler, world, stoneIDs, buildHintString("the " + colorText(trial + " Trial", 'Yellow') + " was dispelled by Sheik."), hint_dist['trial'][1])
     elif world.trials <= 3 and world.trials > 0:
         for trial,skipped in world.skipped_trials.items():
             if not skipped:
-                add_hint(worlds, world, stoneIDs, buildHintString("the " + colorText(trial + " Trial", 'Pink') + " protects Ganon's Tower."), hint_dist['trial'][1])
+                add_hint(spoiler, world, stoneIDs, buildHintString("the " + colorText(trial + " Trial", 'Pink') + " protects Ganon's Tower."), hint_dist['trial'][1])
 
+    hint_types = list(hint_types)
+    hint_prob  = list(hint_prob)
     while stoneIDs:
-        [hint_type] = random_choices(hint_types, weights=hint_prob)
+        try:
+            [hint_type] = random_choices(hint_types, weights=hint_prob)
+        except IndexError:
+            raise Exception('Not enough valid hints to fill gossip stone locations.')
 
-        hint = hint_func[hint_type](world, checkedLocations)
-        if hint != None:
+        hint = hint_func[hint_type](spoiler, world, checkedLocations)
+        if hint == None:
+            index = hint_types.index(hint_type)
+            del hint_types[index]
+            del hint_prob[index]
+        else:
             text, location = hint
-            add_hint(worlds, world, stoneIDs, text, hint_dist[hint_type][1], location)
+            add_hint(spoiler, world, stoneIDs, text, hint_dist[hint_type][1], location)
 
 
 # builds boss reward text that is displayed at the temple of time altar for child and adult, pull based off of item in a fixed order.
@@ -401,7 +447,7 @@ def buildBossString(reward, color, world):
     text = ''
     for location in world.get_filled_locations():
         if location.item.name == reward:
-            text += '\x08\x13' + chr(location.item.code)
+            text += '\x08\x13' + chr(location.item.special['item_id'])
             text += colorText(getHint(location.name, world.clearer_hints).text, color)
     return text
 
@@ -414,23 +460,22 @@ def buildGanonText(world, messages):
     update_message_by_id(messages, 0x70CA, " ")
 
     # lines before battle
-    text = '\x08'
     ganonLines = getHintGroup('ganonLine', world)
     random.shuffle(ganonLines)
     text = get_raw_text(ganonLines.pop().text)
     update_message_by_id(messages, 0x70CB, text)
 
     # light arrow hint or validation chest item
-    text = '\x08'
     if world.trials == 0:
-        for location in world.get_filled_locations():
-            if location.item.name == 'Light Arrows':
-                text = get_raw_text(getHint('Light Arrow Location', world.clearer_hints).text)
-                location_hint = location.hint.replace('Ganon\'s Castle', 'my castle')
-                location_hint = location.hint.replace('Ganon\'s Tower', 'my tower')
-                text += get_raw_text(location_hint)
-                text += '!'
-                break
+        location = world.light_arrow_location
+        text = get_raw_text(getHint('Light Arrow Location', world.clearer_hints).text)
+        location_hint = location.hint.replace('Ganon\'s Castle', 'my castle') \
+                                     .replace('Ganon\'s Tower', 'my tower')
+        if world.id != location.world.id:
+            text += "\x05\x42Player %d's\x05\x40 %s" % (location.world.id +1, get_raw_text(location_hint))
+        else:
+            text += get_raw_text(location_hint)
+        text += '!'
     else:
         text = get_raw_text(getHint('Validation Line', world.clearer_hints).text)
         for location in world.get_filled_locations():
@@ -440,6 +485,7 @@ def buildGanonText(world, messages):
                 break
 
     update_message_by_id(messages, 0x70CC, text)
+
 
 def get_raw_text(string):
     text = ''
@@ -455,3 +501,4 @@ def get_raw_text(string):
         else:
             text += char
     return text
+

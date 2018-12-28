@@ -1,6 +1,7 @@
 import random
 import struct
 import itertools
+import re
 
 from World import World
 from Rom import LocalRom
@@ -70,6 +71,9 @@ def patch_rom(spoiler:Spoiler, world:World, rom:LocalRom):
     # Remove locked door to Boss Key Chest in Fire Temple
     if not world.keysanity and not world.dungeon_mq['Fire Temple']:
         rom.write_byte(0x22D82B7, 0x3F)
+    # Remove the unused locked door in water temple
+    if not world.dungeon_mq['Water Temple']:
+        rom.write_byte(0x25B8197, 0x3F)
 
     if world.bombchus_in_logic:
         rom.write_int32(rom.sym('BOMBCHUS_IN_LOGIC'), 1)
@@ -480,6 +484,15 @@ def patch_rom(spoiler:Spoiler, world:World, rom:LocalRom):
     # Ruto never disappears from Jabu Jabu's Belly
     rom.write_byte(0xD01EA3, 0x00)
 
+    #Shift octorock in jabu forward
+    rom.write_bytes(0x275906E, [0xFF, 0xB3, 0xFB, 0x20, 0xF9, 0x56])
+
+    #Move fire/forest temple switches down 1 unit to make it easier to press
+    rom.write_bytes(0x24860A8, [0xFC, 0xF4]) #forest basement 1
+    rom.write_bytes(0x24860C8, [0xFC, 0xF4]) #forest basement 2
+    rom.write_bytes(0x24860E8, [0xFC, 0xF4]) #forest basement 3
+    rom.write_bytes(0x236C148, [0x11, 0x93]) #fire hammer room
+
     # Speed up Epona race start
     rom.write_bytes(0x29BE984, [0x00, 0x00, 0x00, 0x02])
     rom.write_bytes(0x29BE9CA, [0x00, 0x01, 0x00, 0x02])
@@ -600,12 +613,16 @@ def patch_rom(spoiler:Spoiler, world:World, rom:LocalRom):
     rom.write_bytes(0xE2E6A0, [0x80, 0xAA, 0xE2, 0x4C])
     rom.write_bytes(0xE2D440, [0x24, 0x19, 0x00, 0x00])
 
+    # Offset kakariko carpenter starting position
+    rom.write_bytes(0x1FF93A4, [0x01, 0x8D, 0x00, 0x11, 0x01, 0x6C, 0xFF, 0x92, 0x00, 0x00, 0x01, 0x78, 0xFF, 0x2E, 0x00, 0x00, 0x00, 0x03, 0xFD, 0x2B, 0x00, 0xC8, 0xFF, 0xF9, 0xFD, 0x03, 0x00, 0xC8, 0xFF, 0xA9, 0xFD, 0x5D, 0x00, 0xC8, 0xFE, 0x5F]) # re order the carpenter's path
+    rom.write_byte(0x1FF93D0, 0x06) # set the path points to 6
+    rom.write_bytes(0x20160B6, [0x01, 0x8D, 0x00, 0x11, 0x01, 0x6C]) # set the carpenter's start position
 
     # Dampe always digs something up and first dig is always the Piece of Heart
     rom.write_bytes(0xCC3FA8, [0xA2, 0x01, 0x01, 0xF8])
     rom.write_bytes(0xCC4024, [0x00, 0x00, 0x00, 0x00])
 
-    #Give hp after first ocarina minigame round
+    # Give hp after first ocarina minigame round
     rom.write_bytes(0xDF2204, [0x24, 0x03, 0x00, 0x02])
 
     # Allow owl to always carry the kid down Death Mountain
@@ -676,6 +693,7 @@ def patch_rom(spoiler:Spoiler, world:World, rom:LocalRom):
     # will overwrite the byte at offset with the given value
     def write_save_table(rom):
         nonlocal initial_save_table
+        initial_save_table += [0x00,0x00,0x00,0x00]
 
         table_len = len(initial_save_table)
         if table_len > 0x400:
@@ -709,6 +727,7 @@ def patch_rom(spoiler:Spoiler, world:World, rom:LocalRom):
     write_bits_to_save(0x0EED, 0x80) # "Watched Ganon's Tower Collapse / Caught by Gerudo"
     write_bits_to_save(0x0EF9, 0x01) # "Greeted by Saria"
     write_bits_to_save(0x0F0A, 0x04) # "Spoke to Ingo Once as Adult"
+    write_bits_to_save(0x0F0F, 0x40) # "Met Poe Collector in Ruined Market"
     write_bits_to_save(0x0F1A, 0x04) # "Met Darunia in Fire Temple"
 
     write_bits_to_save(0x0ED7, 0x01) # "Spoke to Child Malon at Castle or Market"
@@ -830,7 +849,14 @@ def patch_rom(spoiler:Spoiler, world:World, rom:LocalRom):
         write_bits_to_save(0x00B1, 0x06) # "Ice Map/Compass"
 
     if world.start_with_rupees:
-        write_byte_to_save(0x0035, 0x63) # start with 99 rupees
+        if world.start_with_wallet:
+            write_byte_to_save(0x0034, 0x03) # start with 999 rupees if tycoon, first byte
+            write_byte_to_save(0x0035, 0xE7) # second byte
+        else:
+            write_byte_to_save(0x0035, 0x63) # start with 99 rupees
+
+    if world.start_with_wallet:
+        write_bits_to_save(0x00A2, 0x30) # tycoon's wallet
 
     if world.start_with_deku_equipment:
         if world.shopsanity == "off":
@@ -845,6 +871,20 @@ def patch_rom(spoiler:Spoiler, world:World, rom:LocalRom):
     if world.start_with_fast_travel:
         write_bits_to_save(0x00A6, 0x09) # start with Prelude of Light & Serenade of Water
         write_byte_to_save(0x007F, 0x0D) # Farore's Wind in 12th inventory slot
+
+    # Set starting time of day
+    if world.starting_tod != 'default':
+        tod = {
+                'midnight':      0x00,
+                'witching-hour': 0x20,
+                'early-morning': 0x40,
+                'morning':       0x60,
+                'noon':          0x80,
+                'afternoon':     0xA0,
+                'evening':       0xC0,
+                'dusk':          0xE0,
+                }
+        write_bytes_to_save(0x000C, [tod[world.starting_tod], 0x00])
 
     # Revert change that Skips the Epona Race
     if not world.no_epona_race:
@@ -943,7 +983,9 @@ def patch_rom(spoiler:Spoiler, world:World, rom:LocalRom):
     poe_points = world.big_poe_count * 100
     rom.write_int16(0xEE69CE, poe_points)
     # update dialogue
-    if world.big_poe_count != 10:
+    new_message = "\x08Hey, young man. What's happening \x01today? If you have a \x05\x41Poe\x05\x40, I will \x01buy it.\x04\x1AIf you earn \x05\x41%d points\x05\x40, you'll\x01be a happy man! Heh heh.\x04\x08Your card now has \x05\x45\x1E\x01 \x05\x40points.\x01Come back again!\x01Heh heh heh!\x02" % poe_points
+    update_message_by_id(messages, 0x70F5, new_message)
+    if world.big_poe_count != 10:      
         new_message = "\x1AOh, you brought a Poe today!\x04\x1AHmmmm!\x04\x1AVery interesting!\x01This is a \x05\x41Big Poe\x05\x40!\x04\x1AI'll buy it for \x05\x4150 Rupees\x05\x40.\x04On top of that, I'll put \x05\x41100\x01points \x05\x40on your card.\x04\x1AIf you earn \x05\x41%d points\x05\x40, you'll\x01be a happy man! Heh heh." % poe_points
         update_message_by_id(messages, 0x70f7, new_message)
         new_message = "\x1AWait a minute! WOW!\x04\x1AYou have earned \x05\x41%d points\x05\x40!\x04\x1AYoung man, you are a genuine\x01\x05\x41Ghost Hunter\x05\x40!\x04\x1AIs that what you expected me to\x01say? Heh heh heh!\x04\x1ABecause of you, I have extra\x01inventory of \x05\x41Big Poes\x05\x40, so this will\x01be the last time I can buy a \x01ghost.\x04\x1AYou're thinking about what I \x01promised would happen when you\x01earned %d points. Heh heh.\x04\x1ADon't worry, I didn't forget.\x01Just take this." % (poe_points, poe_points)
@@ -1237,12 +1279,13 @@ def patch_rom(spoiler:Spoiler, world:World, rom:LocalRom):
         bombchu_ids = [0x6A, 0x03, 0x6B]
         for i in bombchu_ids:
             item = read_rom_item(rom, i)
-            item['fast_chest'] = 0
+            item['chest_type'] = 0
             write_rom_item(rom, i, item)
 
     # Update chest type sizes
     if world.correct_chest_sizes:
-        update_chest_sizes(rom, override_table)
+        symbol = rom.sym('CHEST_SIZE_MATCH_CONTENTS')
+        rom.write_int32(symbol, 0x00000001)
         # Move Ganon's Castle's Zelda's Lullaby Chest back so is reachable if large
         if not world.dungeon_mq['Ganons Castle']:
             rom.write_int16(0x321B176, 0xFC40) # original 0xFC48
@@ -1350,7 +1393,7 @@ def patch_rom(spoiler:Spoiler, world:World, rom:LocalRom):
 
 item_row_struct = struct.Struct('>BBHHBBIIhh') # Match item_row_t in item_table.h
 item_row_fields = [
-    'base_item_id', 'action_id', 'text_id', 'object_id', 'graphic_id', 'fast_chest',
+    'base_item_id', 'action_id', 'text_id', 'object_id', 'graphic_id', 'chest_type',
     'upgrade_fn', 'effect_fn', 'effect_arg1', 'effect_arg2',
 ]
 
@@ -1374,7 +1417,7 @@ def get_override_table(world):
     return list(filter(lambda val: val != None, map(get_override_entry, world.get_filled_locations())))
 
 
-override_struct = struct.Struct('>xBBBxBH') # match override_t in get_items.c
+override_struct = struct.Struct('>xBBBHBB') # match override_t in get_items.c
 def get_override_table_bytes(override_table):
     return b''.join(sorted(itertools.starmap(override_struct.pack, override_table)))
 
@@ -1387,6 +1430,10 @@ def get_override_entry(location):
         return None
 
     player_id = location.item.world.id + 1
+    if location.item.looks_like_item is not None:
+        looks_like_item_id = location.item.looks_like_item.index
+    else:
+        looks_like_item_id = 0
 
     if location.type in ['NPC', 'BossHeart']:
         type = 0
@@ -1406,7 +1453,7 @@ def get_override_entry(location):
     else:
         return None
 
-    return (scene, type, default, player_id, item_id)
+    return (scene, type, default, item_id, player_id, looks_like_item_id)
 
 
 chestTypeMap = {
@@ -1511,32 +1558,6 @@ def get_override_itemid(override_table, scene, type, flags):
     return None
 
 
-def update_chest_sizes(rom, override_table):
-    def get_chest(rom, actor_id, actor, scene):
-        if actor_id == 0x000A: #Chest Actor
-            actor_var = rom.read_int16(actor + 14)
-            return [scene, actor_var & 0x001F]
-
-    chest_list = get_actor_list(rom, get_chest)
-    for actor, [scene, flags] in chest_list.items():
-        item_id = get_override_itemid(override_table, scene, 1, flags)
-
-        if None in [actor, scene, flags, item_id]:
-            continue
-        # Do not change the size of the chest under the grave in Dodongo's Cavern MQ.
-        if scene == 1 and flags == 1:
-            continue
-
-        rom_item = read_rom_item(rom, item_id)
-        itemType = int(not rom_item['fast_chest'])
-
-        default = rom.read_int16(actor + 14)
-        chestType = default & 0xF000
-        newChestType = chestTypeMap[chestType][itemType]
-        default = (default & 0x0FFF) | newChestType
-        rom.write_int16(actor + 14, default)
-
-
 def set_grotto_id_data(rom):
     def set_grotto_id(rom, actor_id, actor, scene):
         if actor_id == 0x009B: #Grotto
@@ -1590,6 +1611,24 @@ def get_locked_doors(rom, world):
     return get_actor_list(rom, locked_door)
 
 
+def create_fake_name(name):
+    vowels = 'aeiou'
+    list_name = list(name)
+    vowel_indexes = [i for i,c in enumerate(list_name) if c in vowels]
+    for i in random.sample(vowel_indexes, min(2, len(vowel_indexes))):
+        c = list_name[i]
+        list_name[i] = random.choice([v for v in vowels if v != c])
+    
+    # keeping the game E...
+    new_name = ''.join(list_name)
+    censor = ['dike', 'cunt', 'cum', 'puss', 'shit', 'penis']
+    new_name_az = re.sub(r'[^a-zA-Z]', '', name.lower(), re.UNICODE)
+    for cuss in censor:
+        if cuss in new_name_az:
+            return create_fake_name(name)
+    return new_name
+
+
 def place_shop_items(rom, world, shop_items, messages, locations, init_shop_id=False):
     if init_shop_id:
         place_shop_items.shop_id = 0x32
@@ -1601,7 +1640,18 @@ def place_shop_items(rom, world, shop_items, messages, locations, init_shop_id=F
             shop_objs.add(location.item.special['object'])
             rom.write_int16(location.address, location.item.index)
         else:
-            rom_item = read_rom_item(rom, location.item.index)
+            if location.item.looks_like_item is not None:
+                item_display = location.item.looks_like_item
+            else:
+                item_display = location.item
+
+            # bottles in shops should look like empty bottles
+            # so that that are different than normal shop refils
+            if 'shop_object' in item_display.special:
+                rom_item = read_rom_item(rom, item_display.special['shop_object'])
+            else:
+                rom_item = read_rom_item(rom, item_display.index)
+
             shop_objs.add(rom_item['object_id'])
             shop_id = place_shop_items.shop_id
             rom.write_int16(location.address, shop_id)
@@ -1624,16 +1674,22 @@ def place_shop_items(rom, world, shop_items, messages, locations, init_shop_id=F
             shuffle_messages.shop_item_messages.extend(
                 [shop_item.description_message, shop_item.purchase_message])
 
-            if location.item.dungeonitem or location.item.type == 'FortressSmallKey':
-                split_item_name = location.item.name.split('(')
+            if item_display.dungeonitem:
+                split_item_name = item_display.name.split('(')
                 split_item_name[1] = '(' + split_item_name[1]
+
+                if location.item.name == 'Ice Trap':
+                    split_item_name[0] = create_fake_name(split_item_name[0])
+
                 if world.world_count > 1:
                     description_text = '\x08\x05\x41%s  %d Rupees\x01%s\x01\x05\x42Player %d\x05\x40\x01Special deal! ONE LEFT!\x09\x0A\x02' % (split_item_name[0], location.price, split_item_name[1], location.item.world.id + 1)
                 else:
                     description_text = '\x08\x05\x41%s  %d Rupees\x01%s\x01\x05\x40Special deal! ONE LEFT!\x01Get it while it lasts!\x09\x0A\x02' % (split_item_name[0], location.price, split_item_name[1])
                 purchase_text = '\x08%s  %d Rupees\x09\x01%s\x01\x1B\x05\x42Buy\x01Don\'t buy\x05\x40\x02' % (split_item_name[0], location.price, split_item_name[1])
             else:
-                shop_item_name = getSimpleHintNoPrefix(location.item)
+                shop_item_name = getSimpleHintNoPrefix(item_display)
+                if location.item.name == 'Ice Trap':
+                    shop_item_name = create_fake_name(shop_item_name)
 
                 if world.world_count > 1:
                     description_text = '\x08\x05\x41%s  %d Rupees\x01\x05\x42Player %d\x05\x40\x01Special deal! ONE LEFT!\x09\x0A\x02' % (shop_item_name, location.price, location.item.world.id + 1)

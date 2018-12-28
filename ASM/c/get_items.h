@@ -4,7 +4,7 @@
 #include "z64.h"
 
 void item_overrides_init();
-void give_pending_item();
+void handle_pending_items();
 
 enum override_type {
     OVR_BASE_ITEM = 0,
@@ -28,9 +28,9 @@ typedef union {
 typedef union {
     uint32_t all;
     struct {
-        char     pad_;
-        uint8_t  player;
         uint16_t item_id;
+        uint8_t  player;
+        uint8_t  looks_like_item_id;
     };
 } override_value_t;
 
@@ -39,6 +39,7 @@ typedef struct {
     override_value_t value;
 } override_t;
 
+override_t lookup_override_by_key(override_key_t key);
 override_t lookup_override(z64_actor_t *actor, uint8_t scene, uint8_t item_id);
 
 #endif

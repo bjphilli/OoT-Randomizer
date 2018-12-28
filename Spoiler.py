@@ -83,7 +83,7 @@ class Spoiler(object):
         output += '\n'.join(['    %s' % HASH_ICONS[icon] for icon in self.file_hash])
         output += '\n\n'
 
-        output += 'Settings (%s):\n%s' % (self.settings.get_settings_string(), self.settings.get_settings_display())
+        output += 'Settings (%s):\n%s' % (self.settings.settings_string, self.settings.get_settings_display())
         return output
 
     def spoiler_output(self):
@@ -93,11 +93,13 @@ class Spoiler(object):
             header_world_string = '\n\n{header} [World {world}]:\n\n'
             header_player_string = '\n\n{header} [Player {player}]:\n\n'
             location_string = '{location} [W{world}]:'
+            area_string = '{area} [W{world}]'
             item_string = '{item} [Player {player}]{cost}'
         else:
             header_world_string = '\n\n{header}:\n\n'
             header_player_string = '\n\n{header}:\n\n'
             location_string = '{location}:'
+            area_string = '{area}'
             item_string = '{item}{cost}'
 
         location_padding = len(max(self.locations[0].keys(), key=len)) + extra_padding
@@ -112,6 +114,11 @@ class Spoiler(object):
             for world in self.worlds:
                 output += header_player_string.format(header="Way of the Hero", player=world.id+1)
                 output += '\n'.join(['{:{width}} {}'.format(location_string.format(location=location.name, world=location.world.id+1), item_string.format(item=location.item.name, player=location.item.world.id+1, cost=' [Costs %d Rupees]' % location.item.price if location.item.price is not None else ''), width=location_padding) for location in self.required_locations[world.id]])
+
+            for world in self.worlds:
+                output += header_player_string.format(header="Barren of Treasure", player=world.id+1)
+                output += '\n'.join([area_string.format(area=area, world=world.id+1) for area in world.empty_areas])
+
 
             gossip_padding = len(max([stone.name for stone in gossipLocations.values()], key=len)) + extra_padding
             for world in self.worlds:

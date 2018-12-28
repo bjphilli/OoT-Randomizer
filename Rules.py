@@ -13,8 +13,6 @@ def set_rules(world):
     world.get_region('Links House').can_reach = lambda state: True
     
     for location in world.get_locations():
-        if location.type != 'Chest':
-            forbid_item(location, 'Ice Trap')
 
         if not world.shuffle_song_items:
             if location.type == 'Song':
@@ -57,10 +55,6 @@ def set_rules(world):
 
 def set_rule(spot, rule):
     spot.access_rule = rule
-
-
-def set_always_allow(spot, rule):
-    spot.always_allow = rule
 
 
 def add_rule(spot, rule, combine='and'):

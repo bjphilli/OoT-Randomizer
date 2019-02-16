@@ -216,7 +216,7 @@ set_dungeon_knowledge:
 talon_break_free:
 
     ;displaced code
-    lui    a2, 0x801F
+    addiu    t1, r0, 0x0041
 
     ;preserve registers (t0, t1, t2, t4)
     addiu    sp, sp, -0x20
@@ -275,6 +275,13 @@ warp_speedup:
     sh     t1, 0x1956(t0) ;next entrance 
     li     t1, 0x14
     sb     t1, 0x1951(t0) ;scene load flag
+    la     t0, SAVE_CONTEXT
+    lh     t1, 0x13D2(t0) ; Timer 2 state
+    beqz   t1, @@return
+    nop
+
+    li     t1, 0x01
+    sh     t1, 0x13D4(t0) ; Timer 2 value
     
 @@return: 
     jr     ra

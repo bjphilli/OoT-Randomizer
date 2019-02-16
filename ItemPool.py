@@ -36,7 +36,6 @@ alwaysitems = ([
     + ['Bow'] * 3
     + ['Slingshot'] * 3
     + ['Bomb Bag'] * 3
-    + ['Bottle with Letter']
     + ['Bombs (5)'] * 2
     + ['Bombs (10)']
     + ['Bombs (20)']
@@ -87,10 +86,10 @@ item_difficulty_max = {
     'plentiful': {},
     'balanced': {},
     'scarce': {
-        'Bombchu': 3,
-        'Bombchu (5)': 1,
-        'Bombchu (10)': 2,
-        'Bombchu (20)': 0,
+        'Bombchus': 3,
+        'Bombchus (5)': 1,
+        'Bombchus (10)': 2,
+        'Bombchus (20)': 0,
         'Magic Meter': 1, 
         'Double Defense': 0, 
         'Deku Stick Capacity': 1, 
@@ -101,10 +100,10 @@ item_difficulty_max = {
         'Heart Container': 0,
     },
     'minimal': {
-        'Bombchu': 1,
-        'Bombchu (5)': 1,
-        'Bombchu (10)': 0,
-        'Bombchu (20)': 0,
+        'Bombchus': 1,
+        'Bombchus (5)': 1,
+        'Bombchus (10)': 0,
+        'Bombchus (20)': 0,
         'Nayrus Love': 0,
         'Magic Meter': 1, 
         'Double Defense': 0, 
@@ -547,6 +546,12 @@ def get_pool_core(world):
     else:
         placed_items['Kokiri Sword Chest'] = 'Kokiri Sword'
 
+    if world.open_fountain:
+        bottle = random.choice(normal_bottles)
+        pool.append(bottle)
+    else:
+        pool.append('Bottle with Letter')
+
     if world.shuffle_weird_egg:
         pool.append('Weird Egg')
     else:
@@ -921,7 +926,7 @@ def get_pool_core(world):
     if world.junk_ice_traps == 'off': 
         replace_max_item(pool, 'Ice Trap', 0)
     elif world.junk_ice_traps == 'onslaught':
-        for item, weight in junk_pool_base:
+        for item in [item for item, weight in junk_pool_base] + ['Recovery Heart', 'Bombs (20)', 'Arrows (30)']:
             replace_max_item(pool, item, 0)
 
     for item,max in item_difficulty_max[world.item_pool_value].items():

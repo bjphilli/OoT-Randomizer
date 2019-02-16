@@ -123,6 +123,7 @@ def guiMain(settings=None):
     frames['logic_tab'] = ttk.Frame(notebook)
     frames['other_tab'] = ttk.Frame(notebook)
     frames['cosmetic_tab'] = ttk.Frame(notebook)
+    frames['SFX_tab'] = ttk.Frame(notebook)
     frames['cosmetic_tab_left'] = Frame(frames['cosmetic_tab'])
     frames['cosmetic_tab_right'] = Frame(frames['cosmetic_tab'])
     notebook.add(frames['rom_tab'], text='ROM Options')
@@ -130,6 +131,7 @@ def guiMain(settings=None):
     notebook.add(frames['logic_tab'], text='Detailed Logic')
     notebook.add(frames['other_tab'], text='Other')
     notebook.add(frames['cosmetic_tab'], text='Cosmetic')
+    notebook.add(frames['SFX_tab'], text='SFX')
 
     #######################
     # Randomizer controls #
@@ -138,7 +140,6 @@ def guiMain(settings=None):
     # Hold the results of the user's decisions here
     guivars = {}
     widgets = {}
-    dependencies = {}
     presets = {}
 
     # Hierarchy
@@ -151,16 +152,22 @@ def guiMain(settings=None):
 
     # Logic tab
     frames['checks']      = LabelFrame(frames['logic_tab'],          text='Adult Trade Sequence', labelanchor=NW)
-    frames['tricks']      = LabelFrame(frames['logic_tab'],          text='Lens of Truth',   labelanchor=NW)
+    frames['tricks']      = LabelFrame(frames['logic_tab'],          text='Lens of Truth',     labelanchor=NW)
 
     #Other Tab
     frames['convenience'] = LabelFrame(frames['other_tab'],          text='Timesavers',        labelanchor=NW)
     frames['other']       = LabelFrame(frames['other_tab'],          text='Misc',              labelanchor=NW)
 
     #Cosmetic tab
-    frames['cosmetic']    = LabelFrame(frames['cosmetic_tab'],       text='General',           labelanchor=NW)
-    frames['colors']      = LabelFrame(frames['cosmetic_tab_right'], text='Colors',            labelanchor=NW)
-    frames['sfx']         = LabelFrame(frames['cosmetic_tab_left'],  text='SFX',               labelanchor=NW)
+    frames['cosmetic']    = LabelFrame(frames['cosmetic_tab_left'],  text='General',           labelanchor=NW)
+    frames['sword_trails']= LabelFrame(frames['cosmetic_tab_left'],  text='Sword Trail Colors',labelanchor=NW)
+    frames['tunic_colors']= LabelFrame(frames['cosmetic_tab_right'], text='Tunics',            labelanchor=NW)
+    frames['navi_colors'] = LabelFrame(frames['cosmetic_tab_right'], text='Navi Colors',       labelanchor=NW)
+
+    #Cosmetic tab
+    frames['sfx']         = LabelFrame(frames['SFX_tab'],            text='General',           labelanchor=NW)
+    frames['menu_sfx']    = LabelFrame(frames['SFX_tab'],            text='Menu',              labelanchor=NW)
+    frames['npc_sfx']     = LabelFrame(frames['SFX_tab'],            text='NPC',               labelanchor=NW)
 
 
     # Shared
@@ -180,21 +187,13 @@ def guiMain(settings=None):
             if widget_type == 'Scale':
                 widget.configure(fg='Black'if enabled else 'Grey')
 
-
-    def check_dependency(name):
-        if name in dependencies:
-            return dependencies[name](guivars)
-        else:
-            return True
-
-
     def show_settings(*event):
         settings = guivars_to_settings(guivars)
         settings_string_var.set( settings.get_settings_string() )
 
         # Update any dependencies
         for info in setting_infos:
-            dep_met = check_dependency(info.name)
+            dep_met = settings.check_dependency(info.name)
 
             if info.name in widgets:
                 toggle_widget(widgets[info.name], dep_met)
@@ -255,11 +254,10 @@ def guiMain(settings=None):
     guivars['count'] = StringVar()
     widgets['count'] = Spinbox(countDialogFrame, from_=1, to=100, textvariable=guivars['count'], width=3)
 
-    if os.path.exists(local_path('README.html')):
-        def open_readme():
-            open_file(local_path('README.html'))
-        openReadmeButton = Button(countDialogFrame, text='Open Documentation', command=open_readme)
-        openReadmeButton.pack(side=RIGHT, padx=5)
+    def open_readme():
+        open_file('https://wiki.ootrandomizer.com/index.php?title=Main_Page')
+    openReadmeButton = Button(countDialogFrame, text='Open Wiki Page', command=open_readme)
+    openReadmeButton.pack(side=RIGHT, padx=5)
 
     countLabel.pack(side=LEFT)
     widgets['count'].pack(side=LEFT, padx=2)
@@ -269,9 +267,6 @@ def guiMain(settings=None):
     ############
 
     for info in setting_infos:
-        if info.gui_params and 'dependency' in info.gui_params:
-            dependencies[info.name] = info.gui_params['dependency']
-
         if info.gui_params and 'group' in info.gui_params:
             if info.gui_params['widget'] == 'Checkbutton':
                 # Determine the initial value of the checkbox
@@ -438,10 +433,16 @@ def guiMain(settings=None):
     frames['cosmetic_tab_right'].pack(fill=BOTH, expand=True, anchor=W, side=RIGHT)
 
     # Cosmetics tab - Left Side
-    frames['sfx'].pack(fill=BOTH, expand=True, anchor=W, side=TOP, pady=(5,1))
+    frames['sword_trails'].pack(fill=BOTH, expand=True, anchor=W, side=TOP, pady=(5,1))
 
     # Cosmetics tab - Right Side
-    frames['colors'].pack(fill=BOTH, expand=True, anchor=W, side=TOP, pady=(5,1))
+    frames['tunic_colors'].pack(fill=BOTH, expand=True, anchor=N, side=TOP)
+    frames['navi_colors'].pack(fill=BOTH, expand=True, anchor=W, side=TOP, pady=(5,1))
+
+    #SFX tab
+    frames['sfx'].pack(          fill=BOTH, expand=True, anchor=N, side=LEFT, pady=(5,1))
+    frames['menu_sfx'].pack( fill=BOTH, expand=False, anchor=W, side=TOP, pady=(5,1))
+    frames['npc_sfx'].pack(fill=BOTH, expand=True, anchor=W, side=BOTTOM, pady=(5,1))
 
     notebook.pack(fill=BOTH, expand=True, padx=5, pady=5)
 
@@ -603,9 +604,11 @@ def guiMain(settings=None):
             else:
                 notebook.tab(2, state="disabled")
             notebook.tab(3, state="normal")
-            toggle_widget(widgets['world_count'], check_dependency('world_count'))
-            toggle_widget(widgets['create_spoiler'], check_dependency('create_spoiler'))
-            toggle_widget(widgets['count'], check_dependency('count'))
+
+            settings = guivars_to_settings(guivars)
+            toggle_widget(widgets['world_count'], settings.check_dependency('world_count'))
+            toggle_widget(widgets['create_spoiler'], settings.check_dependency('create_spoiler'))
+            toggle_widget(widgets['count'], settings.check_dependency('count'))
             toggle_widget(widgets['settings_presets'], True)
         else:
             notebook.tab(1, state="disabled")
@@ -725,8 +728,8 @@ def guiMain(settings=None):
                 settings = Settings( json.load(f) )
         except:
             settings = Settings({})
-        settings.update_seed("")
         settings_to_guivars(settings, guivars)
+        guivars['seed'].set("")
 
         presets = {}
         for file in [data_path('presets_default.json')] \
